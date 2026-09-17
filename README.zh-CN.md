@@ -110,9 +110,17 @@ classicui 只在启动时读主题，`fcitx5-remote -r` 重载配置不会换主
 `gmaxxxie.fcitx5-theme enabled third-party service`。
 若不在列表中，运行 `omarchy-shell shell rescanPlugins` 后重新启用。
 
-如果 shell 启动后第一次切主题有效、之后都无效，说明本地版本还没有 `theme.name` 修复，
-监视停在了已被删除的 `colors.toml` inode 上。执行 `omarchy plugin update` 更新，
-或用 `./install.sh` 装上兜底 hook。
+`omarchy plugin list` 只反映注册状态，不代表 QML 真的编译通过；一个写错的 handler 会让
+整个服务组件静默加载失败。所以还要看 shell 日志：
+
+```bash
+journalctl --user --since "-5 min" | grep fcitx5-theme
+```
+
+出现 `service plugin load failed for gmaxxxie.fcitx5-theme` 就说明组件根本没加载、
+没有任何监视在跑，候选框会停在上一次生成的主题上。上游 ≤1.1.0 在 Quickshell 0.3.x
+上必然如此（`Cannot assign to non-existent property "onFailed"`），
+执行 `omarchy plugin update` 即可更新到修复版本。
 
 **Q: 想跟随的 rime 配置改在 `custom/` 目录不生效？**
 `~/.local/share/fcitx5/rime/custom/` 只是模板仓库（librime 不扫描子目录），

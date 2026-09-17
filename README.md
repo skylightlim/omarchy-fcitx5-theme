@@ -117,9 +117,17 @@ Check whether the service component is loaded: `omarchy plugin list` should show
 `gmaxxxie.fcitx5-theme enabled third-party service`.
 If it's missing, run `omarchy-shell shell rescanPlugins` and re-enable it.
 
-If the first theme switch after a shell start works and every later one is ignored, the checkout
-predates the `theme.name` fix — the watch is stranded on a deleted `colors.toml` inode. Confirm
-with `omarchy plugin update`, or install the fallback hook via `./install.sh`.
+`omarchy plugin list` only reports what is registered, not whether the QML actually compiled. A
+single bad handler takes the whole service down silently, so check the shell log too:
+
+```bash
+journalctl --user --since "-5 min" | grep fcitx5-theme
+```
+
+`service plugin load failed for gmaxxxie.fcitx5-theme` there means the component never loaded and
+nothing is watching — the candidate box will sit on whatever theme it last generated. Upstream
+≤1.1.0 always fails this way on Quickshell 0.3.x (`Cannot assign to non-existent property
+"onFailed"`); `omarchy plugin update` picks up the fix.
 
 **Q: My rime config in `custom/` isn't taking effect?**
 `~/.local/share/fcitx5/rime/custom/` is only a template repository (librime does not scan
