@@ -2,6 +2,10 @@
 
 > [English](README.md) | [简体中文](README.zh-CN.md)
 
+> 本仓库 fork 自 [gmaxxxie/omarchy-fcitx5-theme](https://github.com/gmaxxxie/omarchy-fcitx5-theme)，
+> 修复了「第一次之后切主题不再跟随」以及「浅色主题候选文字看不见」两个问题。
+> 插件 id 未改动，可直接替换上游版本。
+
 让 fcitx5 输入法候选框（候选词面板）**自动跟随 Omarchy 系统主题**。
 
 `omarchy theme set <主题>` 后候选框即时换肤，无需手动操作。
@@ -12,12 +16,17 @@
 
 本扩展是一个 **Omarchy shell 插件（`service` 类型）**，注册在插件市场中：
 
-1. `omarchy theme set` 会把当前主题的配色写入
-   `~/.local/state/omarchy/current/theme/colors.toml`
-2. 插件的服务组件用 `FileView`（Quickshell 文件监视）监听该文件变化
+1. `omarchy theme set` 把新主题换入 `~/.local/state/omarchy/current/theme/`，
+   随后把主题名写进 `~/.local/state/omarchy/current/theme.name`
+2. 插件的服务组件用 `FileView`（Quickshell 文件监视）监听 `theme.name` 变化
 3. 变化时调用内置生成器，从主题 `colors.toml` 生成匹配的 fcitx5 候选框主题
    （`~/.local/share/fcitx5/themes/omarchy-<主题>/theme.conf`）
 4. 写入 `~/.config/fcitx5/conf/classicui.conf` 的 `Theme=` 并重启 fcitx5 应用
+
+监听 `theme.name` 而不是 `colors.toml`，是因为 `omarchy theme set` 会整个替换
+`current/theme` 目录（`rm -rf` + `mv`）：目录里每个文件每次换主题都是新的 inode，
+而 inotify 跟的是 inode 不是路径，监听 `colors.toml` 在第一次换主题后就失效了。
+`theme.name` 是原地重写的，inode 不变，监听才能一直有效。
 
 生成器是**幂等**的：主题没变时不重启 fcitx5，可被反复调用。
 
@@ -26,7 +35,7 @@
 ### 方式一：插件安装（主机制，推荐）
 
 ```bash
-omarchy plugin add https://github.com/gmaxxxie/omarchy-fcitx5-theme.git --enable
+omarchy plugin add https://github.com/skylightlim/omarchy-fcitx5-theme.git --enable
 ```
 
 插件自带完整功能：监视 + 生成 + 应用。
@@ -34,7 +43,7 @@ omarchy plugin add https://github.com/gmaxxxie/omarchy-fcitx5-theme.git --enable
 ### 方式二：完整安装（插件 + 兜底 hook）
 
 ```bash
-git clone https://github.com/gmaxxxie/omarchy-fcitx5-theme && cd omarchy-fcitx5-theme
+git clone https://github.com/skylightlim/omarchy-fcitx5-theme && cd omarchy-fcitx5-theme
 ./install.sh
 ```
 
@@ -59,14 +68,18 @@ omarchy plugin remove gmaxxxie.fcitx5-theme   # 仅移除插件
 
 | 元素 | 映射（colors.toml） |
 |------|---------------------|
-| 面板底色 | `background`（深色主题）/ `lighter_background`（浅色主题） |
-| 候选文字 | `foreground`（深色主题）/ `dark_foreground`（浅色主题） |
+| 面板底色 | `background` |
+| 候选文字 | `foreground` |
 | 选中候选高亮底 | `accent` |
-| 选中候选文字 | `darker_background`（深色主题）/ `dark_foreground`（浅色主题） |
+| 选中候选文字 | `darker_background`（深色主题）/ `background`（浅色主题） |
 | 面板边框 | `selection`（缺失时回退 `muted`） |
 | 菜单分隔线 | `bright_foreground`（缺失时回退边框色） |
 
 深浅主题均支持：`mode = "light"` 的主题自动使用浅色面板 + 深色文字。
+
+浅色主题刻意**不**使用 `dark_foreground` 和 `lighter_background`：在 Omarchy 的浅色
+调色板里 `dark_foreground` 是「变淡的前景色」而非深色文字，white 主题下它与
+`lighter_background` 同为 `#c0c0c0` —— 用它们会把候选文字画成面板底色本身。
 
 ## 手动操作
 
@@ -96,6 +109,10 @@ classicui 只在启动时读主题，`fcitx5-remote -r` 重载配置不会换主
 检查服务组件是否加载：`omarchy plugin list` 应显示
 `gmaxxxie.fcitx5-theme enabled third-party service`。
 若不在列表中，运行 `omarchy-shell shell rescanPlugins` 后重新启用。
+
+如果 shell 启动后第一次切主题有效、之后都无效，说明本地版本还没有 `theme.name` 修复，
+监视停在了已被删除的 `colors.toml` inode 上。执行 `omarchy plugin update` 更新，
+或用 `./install.sh` 装上兜底 hook。
 
 **Q: 想跟随的 rime 配置改在 `custom/` 目录不生效？**
 `~/.local/share/fcitx5/rime/custom/` 只是模板仓库（librime 不扫描子目录），

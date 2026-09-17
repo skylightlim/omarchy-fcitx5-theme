@@ -2,6 +2,10 @@
 
 > [English](README.md) | [简体中文](README.zh-CN.md)
 
+> Fork of [gmaxxxie/omarchy-fcitx5-theme](https://github.com/gmaxxxie/omarchy-fcitx5-theme),
+> fixing theme switches going undetected after the first one and unreadable candidate text on
+> light themes. The plugin id is unchanged, so it is a drop-in replacement for upstream.
+
 Keep the fcitx5 input-method candidate box **automatically in sync with the Omarchy system theme**.
 
 Run `omarchy theme set <theme>` and the candidate panel restyles instantly — no manual steps needed.
@@ -12,12 +16,17 @@ Run `omarchy theme set <theme>` and the candidate panel restyles instantly — n
 
 This repo is an **Omarchy shell plugin (`service` kind)**, registered in the plugin market:
 
-1. `omarchy theme set` writes the current theme's palette to
-   `~/.local/state/omarchy/current/theme/colors.toml`
-2. The plugin's service component watches that file with a `FileView` (Quickshell file watcher)
+1. `omarchy theme set` swaps the new palette into `~/.local/state/omarchy/current/theme/`
+   and then records the theme in `~/.local/state/omarchy/current/theme.name`
+2. The plugin's service component watches `theme.name` with a `FileView` (Quickshell file watcher)
 3. On change, it invokes a built-in generator that derives a matching fcitx5 candidate-box theme
    from the theme's `colors.toml` (`~/.local/share/fcitx5/themes/omarchy-<theme>/theme.conf`)
 4. It writes `Theme=` into `~/.config/fcitx5/conf/classicui.conf` and restarts the fcitx5 app
+
+`theme.name` is the watch target rather than `colors.toml` because `omarchy theme set` replaces
+the whole `current/theme` directory (`rm -rf` + `mv`). Every file inside it gets a new inode on
+every switch, and an inotify watch follows the inode, not the path — a watch on `colors.toml`
+dies with the first theme change. `theme.name` is rewritten in place, so its watch survives.
 
 The generator is **idempotent**: fcitx5 is only restarted when the theme actually changed, so it
 can safely be invoked repeatedly by hooks, services, or timers.
@@ -27,7 +36,7 @@ can safely be invoked repeatedly by hooks, services, or timers.
 ### Option 1: Plugin install (primary, recommended)
 
 ```bash
-omarchy plugin add https://github.com/gmaxxxie/omarchy-fcitx5-theme.git --enable
+omarchy plugin add https://github.com/skylightlim/omarchy-fcitx5-theme.git --enable
 ```
 
 The plugin ships with the full feature set: watch + generate + apply.
@@ -35,7 +44,7 @@ The plugin ships with the full feature set: watch + generate + apply.
 ### Option 2: Full install (plugin + fallback hook)
 
 ```bash
-git clone https://github.com/gmaxxxie/omarchy-fcitx5-theme && cd omarchy-fcitx5-theme
+git clone https://github.com/skylightlim/omarchy-fcitx5-theme && cd omarchy-fcitx5-theme
 ./install.sh
 ```
 
@@ -64,15 +73,20 @@ from this repo:
 
 | Element | Mapping (colors.toml) |
 |---------|------------------------|
-| Panel background | `background` (dark themes) / `lighter_background` (light themes) |
-| Candidate text | `foreground` (dark themes) / `dark_foreground` (light themes) |
+| Panel background | `background` |
+| Candidate text | `foreground` |
 | Selected candidate highlight | `accent` |
-| Selected candidate text | `darker_background` (dark themes) / `dark_foreground` (light themes) |
+| Selected candidate text | `darker_background` (dark themes) / `background` (light themes) |
 | Panel border | `selection` (falls back to `muted`) |
 | Menu separator | `bright_foreground` (falls back to border color) |
 
 Both light and dark themes are supported: themes with `mode = "light"` automatically use a
 light panel with dark text.
+
+Light themes deliberately do **not** read `dark_foreground` or `lighter_background`. In Omarchy's
+light palettes `dark_foreground` is a dimmed foreground rather than a dark text colour, and on the
+White theme it equals `lighter_background` (`#c0c0c0`) — using them rendered the candidates in the
+panel's own background colour.
 
 ## Manual usage
 
@@ -102,6 +116,10 @@ classicui reads the theme only at startup; `fcitx5-remote -r` reloads config but
 Check whether the service component is loaded: `omarchy plugin list` should show
 `gmaxxxie.fcitx5-theme enabled third-party service`.
 If it's missing, run `omarchy-shell shell rescanPlugins` and re-enable it.
+
+If the first theme switch after a shell start works and every later one is ignored, the checkout
+predates the `theme.name` fix — the watch is stranded on a deleted `colors.toml` inode. Confirm
+with `omarchy plugin update`, or install the fallback hook via `./install.sh`.
 
 **Q: My rime config in `custom/` isn't taking effect?**
 `~/.local/share/fcitx5/rime/custom/` is only a template repository (librime does not scan
