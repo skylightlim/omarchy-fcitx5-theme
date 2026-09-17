@@ -19,6 +19,11 @@ for arg in "$@"; do
   esac
 done
 
+# 同一次切换主题可能同时触发 hook、service 文件监视和启动定时器, 它们写的是同一批
+# 文件。加锁串行化, 避免两次运行交错写坏 theme.conf / classicui.conf。
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/omarchy-fcitx5-theme.lock"
+flock 9
+
 if [[ -z "$slug" || "$slug" == "current" ]]; then
   current="$(omarchy theme current 2>/dev/null || true)"
   slug="$(printf '%s' "$current" | tr '[:upper:] ' '[:lower:]-')"
