@@ -51,10 +51,16 @@ Item {
     onTriggered: root.sync()
   }
 
+  // Quickshell's Process has `started` and `exited`; there is no `failed` signal.
+  // Assigning a handler for one is a QML compile error, and that error takes the
+  // whole component down — the shell logs "service plugin load failed" and then
+  // neither the watcher nor the timer below ever runs.
   Process {
     id: syncProc
     command: ["/bin/bash", root.generator, "current", "--quiet"]
-    onFailed: console.warn("fcitx5-theme", "sync failed")
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode !== 0) console.warn("fcitx5-theme: sync exited with code " + exitCode)
+    }
   }
 
   function sync() {
