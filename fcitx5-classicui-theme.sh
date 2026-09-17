@@ -45,11 +45,16 @@ sel="$(get selection)"; [[ -n "$sel" ]]  || sel="$(get muted)"
 dark_bg="$(get darker_background)"; [[ -n "$dark_bg" ]] || dark_bg="$(get dark_background)"
 [[ -n "$dark_bg" ]] || dark_bg="#11111b"
 
-# 高亮（选中候选）文字颜色：深色主题用深底深字，浅色主题用深色文字
+# 高亮（选中候选）文字颜色：与面板底色对比——深色主题用深底色文字，浅色主题用浅底色文字
 if [[ "$mode" == "light" ]]; then
-  hl_text="$(get dark_foreground)"; [[ -n "$hl_text" ]] || hl_text="#1e1e2e"
-  panel_bg="$(get lighter_background)"; [[ -n "$panel_bg" ]] || panel_bg="$bg"
-  panel_fg="$hl_text"
+  # Omarchy 的浅色调色板里 dark_foreground 是"变淡的前景色"而不是"深色文字",
+  # lighter_background 也只是比 background 略深的一档。white 主题两者相等
+  # (都是 #c0c0c0), 于是候选文字和面板底色同色 —— 候选框整个看不见。
+  # 改为与深色分支对称: 正文用 foreground/background, 选中候选在 accent 底上
+  # 用 background 色文字。
+  hl_text="$bg"
+  panel_bg="$bg"
+  panel_fg="$fg"
 else
   hl_text="$dark_bg"
   panel_bg="$bg"
