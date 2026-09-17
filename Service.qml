@@ -4,24 +4,37 @@ import Quickshell.Io
 
 // Keeps the fcitx5 candidate-box theme in sync with the current Omarchy theme.
 //
-// `omarchy theme set` rewrites ~/.local/state/omarchy/current/theme/colors.toml;
-// watching that file lets this service react live, without polling, and without
-// touching the theme-set hook (the hook remains an optional fallback for
-// headless theme sets where the shell is not watching).
+// Watching the theme state lets this service react live, without polling, and
+// without requiring the theme-set hook (the hook remains a fallback for headless
+// theme sets where the shell is not running).
 Item {
   id: root
   visible: false
 
   readonly property string home: Quickshell.env("HOME") || ""
-  readonly property string themeColorsPath: home + "/.local/state/omarchy/current/theme/colors.toml"
+  readonly property string themeNamePath: home + "/.local/state/omarchy/current/theme.name"
   readonly property string generator: home + "/.config/omarchy/plugins/gmaxxxie.fcitx5-theme/fcitx5-classicui-theme.sh"
 
-  // Watch the current theme's colors file. The generator is idempotent
-  // (skips the fcitx5 restart when nothing changed), so firing on every
-  // theme-set rewrite is cheap.
+  // Watch the current theme's *name* file, not colors.toml.
+  //
+  // `omarchy theme set` stages the new theme and then swaps it in with:
+  //
+  //     rm -rf  current/theme
+  //     mv      current/next-theme current/theme
+  //     echo "$THEME_NAME" > current/theme.name
+  //
+  // so every file below current/theme gets a new inode on every theme switch.
+  // inotify watches an inode rather than a path, so a watch on colors.toml is
+  // left pointing at a deleted file after the first switch and never fires
+  // again — the candidate box silently keeps the theme it was generated with.
+  //
+  // theme.name is rewritten in place (shell truncation keeps the inode) and is
+  // written *after* current/theme is swapped in, which makes it both a stable
+  // watch target and a correct completion signal: by the time it changes, the
+  // new colors.toml is already in place for the generator to read.
   FileView {
     id: themeWatcher
-    path: root.themeColorsPath
+    path: root.themeNamePath
     watchChanges: true
     printErrors: false
     onFileChanged: reload()
