@@ -77,8 +77,9 @@ glyph="$panel_fg"
 
 # 圆角半径与 9-slice 的关系: classicui 用 [.../Background/Margin] 作九宫格切边,
 # 四角按边距大小原样绘制, 中间拉伸。半径必须 <= 边距, 否则圆弧尾部落在拉伸区里,
-# 面板一变宽就被抹平。candlelight 的 macOS 主题是 rx=12 配 Margin=10, 这里取 12。
-radius=12
+# 面板一变宽就被抹平。candlelight 的 macOS 主题是 rx=12 配 Margin=10, 这里取 10:
+# 切换输入法时那个只有一两个字的提示框, 用 candlelight 的内边距会显得过大。
+radius=10
 inset=$radius
 
 out="$HOME/.local/share/fcitx5/themes/omarchy-$slug"
@@ -132,10 +133,10 @@ FullWidthHighlight=True
 PageButtonAlignment=Last Candidate
 
 [InputPanel/TextMargin]
-Left=20
-Right=18
-Top=8
-Bottom=8
+Left=12
+Right=12
+Top=6
+Bottom=6
 
 [InputPanel/ContentMargin]
 Left=4
@@ -156,10 +157,10 @@ Bottom=$inset
 Image=highlight.svg
 
 [InputPanel/Highlight/Margin]
-Left=18
-Right=18
-Top=8
-Bottom=8
+Left=12
+Right=12
+Top=6
+Bottom=6
 
 [InputPanel/PrevPage]
 Image=prev.svg

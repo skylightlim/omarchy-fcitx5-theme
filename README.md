@@ -86,7 +86,7 @@ light panel with dark text.
 
 ### Shape
 
-The panel and the selected-candidate pill are rounded rectangles (`rx=12`), drawn from two SVGs the
+The panel and the selected-candidate pill are rounded rectangles (`rx=10`), drawn from two SVGs the
 generator writes into each theme directory alongside `theme.conf`. The silhouette follows
 [thep0y/fcitx5-themes-candlelight](https://github.com/thep0y/fcitx5-themes-candlelight)'s macOS
 theme (MIT); the colours are regenerated from your palette on every theme switch rather than baked

@@ -80,7 +80,7 @@ omarchy plugin remove gmaxxxie.fcitx5-theme   # 仅移除插件
 
 ### 形状
 
-面板和选中候选的药丸都是圆角矩形（`rx=12`），由生成器在每个主题目录里连同 `theme.conf`
+面板和选中候选的药丸都是圆角矩形（`rx=10`），由生成器在每个主题目录里连同 `theme.conf`
 一起写出两个 SVG 来画。轮廓参考
 [thep0y/fcitx5-themes-candlelight](https://github.com/thep0y/fcitx5-themes-candlelight)
 的 macOS 主题（MIT）；颜色不是写死的，而是每次切主题按当前调色板重新生成 —— 形状保持，
