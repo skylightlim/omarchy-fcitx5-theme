@@ -69,11 +69,52 @@ hl_bg="$accent"
 border="$sel"
 menu_sep="$(get bright_foreground)"; [[ -n "$menu_sep" ]] || menu_sep="$border"
 
-out="$HOME/.local/share/fcitx5/themes/omarchy-$slug"
-mkdir -p "$out"
+# 翻页箭头、子菜单箭头、单选点用正文色。
+# 试过 muted / dark_foreground 这类"淡一档"的颜色: 在深色主题上对比度只有
+# 1.6~2.6:1 (everforest 的 dark_foreground #4f585e 配 #2d353b 基本看不见)。
+# 这些图标只有几个像素宽, 是功能件不是装饰, 宁可和正文一样清楚。
+glyph="$panel_fg"
 
-tmp="$out/.theme.conf.tmp"
-cat > "$tmp" <<EOF
+# 圆角半径与 9-slice 的关系: classicui 用 [.../Background/Margin] 作九宫格切边,
+# 四角按边距大小原样绘制, 中间拉伸。半径必须 <= 边距, 否则圆弧尾部落在拉伸区里,
+# 面板一变宽就被抹平。candlelight 的 macOS 主题是 rx=12 配 Margin=10, 这里取 12。
+radius=12
+inset=$radius
+
+out="$HOME/.local/share/fcitx5/themes/omarchy-$slug"
+
+# 下面会整目录替换, 先确认 slug 没被污染成路径
+if [[ ! "$slug" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+  echo "fcitx5-theme: refusing to generate for suspicious theme slug '$slug'" >&2
+  exit 1
+fi
+
+# 生成到暂存目录再整体比对: 现在一个主题有 theme.conf + 两个 svg + 四个图标,
+# 只比 theme.conf 已经不够 —— 改了配色却不重启 fcitx5 就看不到变化。
+stage="$(mktemp -d "${out}.stage.XXXXXX")"
+trap 'rm -rf "$stage"' EXIT
+
+# 面板与高亮的形状: 各一个圆角矩形, 颜色按当前主题取。
+# 形状参考 thep0y/fcitx5-themes-candlelight 的 macOS 主题 (MIT), 但这里是按
+# 主题重新生成的, 不是复制写死配色的素材。
+cat > "$stage/panel.svg" <<EOF
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="39" height="39" x=".5" y=".5" rx="$radius" fill="$panel_bg" stroke="$border"/></svg>
+EOF
+
+cat > "$stage/highlight.svg" <<EOF
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" rx="$radius" fill="$hl_bg"/></svg>
+EOF
+
+# 翻页按钮等图标从 fcitx5 default 主题取形状, 重新上色。
+# default 主题把它们写死成 fill:#c0c0c0 —— 它不知道用户的调色板, 我们知道。
+# 上游若改了这个字面量, sed 匹配不到, 图标只是保持灰色, 不会坏。
+for img in arrow.svg next.svg prev.svg radio.svg; do
+  src="/usr/share/fcitx5/themes/default/$img"
+  [[ -f "$src" ]] || continue
+  sed "s/fill:#c0c0c0/fill:$glyph/g" "$src" > "$stage/$img"
+done
+
+cat > "$stage/theme.conf" <<EOF
 [Metadata]
 Name=Omarchy $slug
 Version=1
@@ -85,12 +126,14 @@ ScaleWithDPI=True
 NormalColor=$panel_fg
 HighlightCandidateColor=$hl_text
 HighlightColor=$panel_fg
-HighlightBackgroundColor=$hl_bg
+# 高亮底由 highlight.svg 画, 这里必须透明, 否则方角色块会盖在圆角药丸下面
+HighlightBackgroundColor=#00000000
+FullWidthHighlight=True
 PageButtonAlignment=Last Candidate
 
 [InputPanel/TextMargin]
-Left=10
-Right=10
+Left=20
+Right=18
 Top=8
 Bottom=8
 
@@ -101,24 +144,22 @@ Top=4
 Bottom=4
 
 [InputPanel/Background]
-Color=$panel_bg
-BorderColor=$border
-BorderWidth=1
+Image=panel.svg
 
 [InputPanel/Background/Margin]
-Left=4
-Right=4
-Top=4
-Bottom=4
+Left=$inset
+Right=$inset
+Top=$inset
+Bottom=$inset
 
 [InputPanel/Highlight]
-Color=$hl_bg
+Image=highlight.svg
 
 [InputPanel/Highlight/Margin]
-Left=8
-Right=8
-Top=6
-Bottom=6
+Left=18
+Right=18
+Top=8
+Bottom=8
 
 [InputPanel/PrevPage]
 Image=prev.svg
@@ -143,15 +184,13 @@ NormalColor=$panel_fg
 HighlightCandidateColor=$hl_text
 
 [Menu/Background]
-Color=$panel_bg
-BorderColor=$border
-BorderWidth=1
+Image=panel.svg
 
 [Menu/Background/Margin]
-Left=4
-Right=4
-Top=4
-Bottom=4
+Left=$inset
+Right=$inset
+Top=$inset
+Bottom=$inset
 
 [Menu/ContentMargin]
 Left=4
@@ -166,7 +205,7 @@ Image=radio.svg
 Image=arrow.svg
 
 [Menu/Highlight]
-Color=$hl_bg
+Image=highlight.svg
 
 [Menu/Highlight/Margin]
 Left=8
@@ -175,7 +214,7 @@ Top=6
 Bottom=6
 
 [Menu/Separator]
-Color=$border
+Color=$menu_sep
 
 [Menu/TextMargin]
 Left=8
@@ -193,22 +232,17 @@ Bottom=6
 EOF
 
 changed=0
-if [[ -f "$out/theme.conf" ]] && cmp -s "$tmp" "$out/theme.conf"; then
-  rm -f "$tmp"
+if [[ -d "$out" ]] && diff -rq "$stage" "$out" >/dev/null 2>&1; then
+  :
 else
-  mv "$tmp" "$out/theme.conf"
+  rm -rf "$out"
+  mkdir -p "$(dirname "$out")"
+  mv "$stage" "$out"
+  chmod 755 "$out"
   changed=1
 fi
-
-# 翻页按钮等图标从默认主题复制（幂等）
-# fcitx5 的 default 主题发布的是 .svg（classicui 链接了 librsvg）, 之前按 .png
-# 查找, glob 匹配不到任何文件, 于是 theme.conf 里 Image=prev.png 指向的文件
-# 根本不存在 —— 翻页按钮和菜单箭头一直是缺的。
-for img in arrow.svg next.svg prev.svg radio.svg; do
-  src="/usr/share/fcitx5/themes/default/$img"
-  [[ -f "$src" ]] || continue
-  cp "$src" "$out/$img"
-done
+trap - EXIT
+rm -rf "$stage"
 
 # 写入 classicui 配置
 conf="$HOME/.config/fcitx5/conf/classicui.conf"
