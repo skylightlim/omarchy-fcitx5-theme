@@ -73,15 +73,32 @@ from this repo:
 
 | Element | Mapping (colors.toml) |
 |---------|------------------------|
-| Panel background | `background` |
+| Panel background | `background` — `panel.svg` fill |
+| Panel border | `selection` (falls back to `muted`) — `panel.svg` stroke |
 | Candidate text | `foreground` |
-| Selected candidate highlight | `accent` |
+| Selected candidate highlight | `accent` — `highlight.svg` fill |
 | Selected candidate text | `darker_background` (dark themes) / `background` (light themes) |
-| Panel border | `selection` (falls back to `muted`) |
+| Page buttons, menu arrow, radio | `foreground` |
 | Menu separator | `bright_foreground` (falls back to border color) |
 
 Both light and dark themes are supported: themes with `mode = "light"` automatically use a
 light panel with dark text.
+
+### Shape
+
+The panel and the selected-candidate pill are rounded rectangles (`rx=12`), drawn from two SVGs the
+generator writes into each theme directory alongside `theme.conf`. The silhouette follows
+[thep0y/fcitx5-themes-candlelight](https://github.com/thep0y/fcitx5-themes-candlelight)'s macOS
+theme (MIT); the colours are regenerated from your palette on every theme switch rather than baked
+in, so the box keeps the shape and changes with the theme.
+
+`[InputPanel/Background/Margin]` is kept equal to the corner radius. classicui 9-slices the
+background image using that margin — corners unstretched, middle stretched — so a radius larger than
+the margin puts part of each corner arc in the stretched region, where it smears as the panel grows.
+
+Blur is not attempted. `EnableBlur=True` is a KWin path and does nothing under Hyprland, which needs
+a `layerrule = blur, <fcitx5 namespace>` in `~/.config/hypr/` — your config to own, not the
+plugin's.
 
 Light themes deliberately do **not** read `dark_foreground` or `lighter_background`. In Omarchy's
 light palettes `dark_foreground` is a dimmed foreground rather than a dark text colour, and on the

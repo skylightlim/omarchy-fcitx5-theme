@@ -68,14 +68,30 @@ omarchy plugin remove gmaxxxie.fcitx5-theme   # 仅移除插件
 
 | 元素 | 映射（colors.toml） |
 |------|---------------------|
-| 面板底色 | `background` |
+| 面板底色 | `background` —— `panel.svg` 的 fill |
+| 面板边框 | `selection`（缺失时回退 `muted`）—— `panel.svg` 的 stroke |
 | 候选文字 | `foreground` |
-| 选中候选高亮底 | `accent` |
+| 选中候选高亮底 | `accent` —— `highlight.svg` 的 fill |
 | 选中候选文字 | `darker_background`（深色主题）/ `background`（浅色主题） |
-| 面板边框 | `selection`（缺失时回退 `muted`） |
+| 翻页按钮、菜单箭头、单选点 | `foreground` |
 | 菜单分隔线 | `bright_foreground`（缺失时回退边框色） |
 
 深浅主题均支持：`mode = "light"` 的主题自动使用浅色面板 + 深色文字。
+
+### 形状
+
+面板和选中候选的药丸都是圆角矩形（`rx=12`），由生成器在每个主题目录里连同 `theme.conf`
+一起写出两个 SVG 来画。轮廓参考
+[thep0y/fcitx5-themes-candlelight](https://github.com/thep0y/fcitx5-themes-candlelight)
+的 macOS 主题（MIT）；颜色不是写死的，而是每次切主题按当前调色板重新生成 —— 形状保持，
+颜色跟着主题走。
+
+`[InputPanel/Background/Margin]` 与圆角半径保持相等。classicui 用这个边距做九宫格切图：
+四角原样绘制、中间拉伸，半径大于边距时圆弧尾部会落进拉伸区，面板一变宽就被抹平。
+
+不做模糊。`EnableBlur=True` 是 KWin 的路径，Hyprland 下无效；Hyprland 需要在
+`~/.config/hypr/` 里写 `layerrule = blur, <fcitx5 namespace>` —— 那是你自己的配置，
+不该由插件代写。
 
 浅色主题刻意**不**使用 `dark_foreground` 和 `lighter_background`：在 Omarchy 的浅色
 调色板里 `dark_foreground` 是「变淡的前景色」而非深色文字，white 主题下它与
