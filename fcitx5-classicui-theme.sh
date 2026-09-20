@@ -121,7 +121,7 @@ Top=6
 Bottom=6
 
 [InputPanel/PrevPage]
-Image=prev.png
+Image=prev.svg
 
 [InputPanel/PrevPage/ClickMargin]
 Left=5
@@ -130,7 +130,7 @@ Top=4
 Bottom=4
 
 [InputPanel/NextPage]
-Image=next.png
+Image=next.svg
 
 [InputPanel/NextPage/ClickMargin]
 Left=5
@@ -160,10 +160,10 @@ Top=4
 Bottom=4
 
 [Menu/CheckBox]
-Image=radio.png
+Image=radio.svg
 
 [Menu/SubMenu]
-Image=arrow.png
+Image=arrow.svg
 
 [Menu/Highlight]
 Color=$hl_bg
@@ -201,11 +201,13 @@ else
 fi
 
 # 翻页按钮等图标从默认主题复制（幂等）
-for img in arrow.png next.png prev.png radio.png; do
+# fcitx5 的 default 主题发布的是 .svg（classicui 链接了 librsvg）, 之前按 .png
+# 查找, glob 匹配不到任何文件, 于是 theme.conf 里 Image=prev.png 指向的文件
+# 根本不存在 —— 翻页按钮和菜单箭头一直是缺的。
+for img in arrow.svg next.svg prev.svg radio.svg; do
   src="/usr/share/fcitx5/themes/default/$img"
-  if [[ -f "$src" && ! -f "$out/$img" ]]; then
-    cp "$src" "$out/"
-  fi
+  [[ -f "$src" ]] || continue
+  cp "$src" "$out/$img"
 done
 
 # 写入 classicui 配置
