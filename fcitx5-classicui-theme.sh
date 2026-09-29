@@ -92,6 +92,7 @@ fi
 
 # 生成到暂存目录再整体比对: 现在一个主题有 theme.conf + 两个 svg + 四个图标,
 # 只比 theme.conf 已经不够 —— 改了配色却不重启 fcitx5 就看不到变化。
+mkdir -p "$(dirname "$out")"
 stage="$(mktemp -d "${out}.stage.XXXXXX")"
 trap 'rm -rf "$stage"' EXIT
 
